@@ -13,6 +13,7 @@
     --dim: #777;
     --accent: #b3161c;
     --accent-bright: #e5252d;
+    --glow: rgba(229,37,45,.35);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -25,6 +26,44 @@
     align-items: center;
     padding: 2rem 1rem 4rem;
   }
+  /* ---- 1-bit ordered dither: four density bands radiating from the title.
+   * Pure CSS: solid core, then 50%, 25%, 12.5% checker/dot patterns, each
+   * masked to its own radial band. No image assets. */
+  .dither { position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background: var(--accent); opacity: .32;
+    mask-image: radial-gradient(circle at 50% 6%, #000 0%, #000 4%, transparent 7%);
+    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 0%, #000 4%, transparent 7%);
+  }
+  .dither::before { content: ""; position: absolute; inset: 0;
+    background: var(--accent); opacity: .30;
+    background-image:
+      repeating-conic-gradient(var(--accent) 0% 25%, transparent 25% 50%);
+    background-size: 3px 3px;
+    mask-image: radial-gradient(circle at 50% 6%, #000 4%, #000 11%, transparent 15%);
+    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 4%, #000 11%, transparent 15%);
+  }
+  .dither::after { content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 25% 25%, var(--accent) 0 22%, transparent 25%);
+    background-size: 4px 4px; opacity: .28;
+    mask-image: radial-gradient(circle at 50% 6%, #000 11%, #000 22%, transparent 27%);
+    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 11%, #000 22%, transparent 27%);
+  }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -3; pointer-events: none;
+    background-image:
+      radial-gradient(circle at 25% 25%, var(--accent) 0 20%, transparent 23%),
+      radial-gradient(circle at 75% 75%, var(--accent) 0 20%, transparent 23%);
+    background-size: 8px 8px; opacity: .18;
+    mask-image: radial-gradient(circle at 50% 6%, #000 22%, #000 42%, transparent 60%);
+    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 22%, #000 42%, transparent 60%);
+  }
+  /* subtle dither texture on panels */
+  .controls, .name, .theme-btn {
+    background-image:
+      repeating-conic-gradient(rgba(255,255,255,.025) 0% 25%, transparent 25% 50%);
+    background-size: 2px 2px;
+  }
+
   h1 {
     font-family: Georgia, 'Times New Roman', serif;
     font-size: clamp(2rem, 8vw, 3.5rem);
@@ -32,9 +71,34 @@
     color: var(--accent-bright);
     text-transform: lowercase;
     margin-bottom: .25rem;
-    text-shadow: 0 0 18px rgba(229,37,45,.35);
+    text-shadow: 0 0 18px var(--glow);
   }
-  .tagline { color: var(--dim); font-size: .85rem; margin-bottom: 2rem; }
+  .tagline { color: var(--dim); font-size: .85rem; margin-bottom: 1.5rem; }
+  .themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    max-width: 480px;
+  }
+  .theme-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    border-radius: 999px;
+    padding: .45rem 1rem;
+    font-size: .85rem;
+    letter-spacing: .05em;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .theme-btn:hover { color: var(--text); border-color: var(--dim); }
+  .theme-btn.active {
+    color: #fff;
+    border-color: var(--accent-bright);
+    background: var(--accent);
+  }
   .controls {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -98,8 +162,11 @@
 </style>
 </head>
 <body>
+<div class="dither" aria-hidden="true"></div>
 <h1>necrotrachea</h1>
 <p class="tagline">random metal / gore name generator</p>
+
+<div class="themes" id="themes"></div>
 
 <div class="controls">
   <div class="row">
@@ -119,41 +186,158 @@
 <footer><a href="https://github.com/tinkthemaker/necrotrachea">source</a></footer>
 
 <script>
-const PREFIXES = [
-  "Gore","Blood","Corpse","Viscer","Rot","Putr","Necro","Carn","Butcher",
-  "Slaughter","Disembowl","Exsanguin","Gut","Flesh","Bone","Marrow","Grave",
-  "Crypt","Cadaver","Sepulch","Tor","Vile","Fetid","Maggot","Worm","Bile",
-  "Phlegm","Pus","Gangr","Ulcer","Cyst","Boil","Scab","Wound","Gash","Lacer",
-  "Punct","Skull","Spine","Rib","Femur","Sinew","Tendon","Gristle","Hemorrh",
-  "Thromb","Necrot","Putresc","Mortu","Funer","Sepul",
-];
-const MIDDLES = [
-  "spawn","rend","gorg","churn","slath","writhe","belch","spew","clot",
-  "fiend","stalk","crawl","drip","seep","ooze","blight","murk","grime",
-  "mawl","gor","husk",
-];
-const SUFFIXES = [
-  "fiend","wraith","reaper","butcher","lord","spawn","shroud","casket",
-  "womb","pyre","altar","chalice","monolith","shrine","throne","vortex",
-  "abyss","chasm","mausoleum","ossuary","effigy","reliquary","sepulcher",
-  "catacomb","gallows","pit","eater","devourer","feaster","gurgler",
-  "sprayer","chewer",
-];
-const JOINERS = ["","","","-"," "];
+/* Word banks mined from death/black/doom metal name corpora (~3000 names),
+ * an anatomical terminology glossary (OpenStax A&P 2e), and the Warhammer 40k
+ * lexicon + Latin liturgy for the grimdark theme. */
+const THEMES = {
+gore: {
+  label: "🩸 Gore",
+  accent: "#b3161c", bright: "#e5252d", glow: "rgba(229,37,45,.35)",
+  pre: ["Gore","Blood","Corpse","Viscer","Rot","Putr","Necro","Carn","Butcher",
+    "Slaughter","Disembowel","Exsanguin","Gut","Flesh","Bone","Marrow","Grave",
+    "Crypt","Cadaver","Sepulch","Vile","Fetid","Maggot","Worm","Bile","Phlegm",
+    "Pus","Gangr","Ulcer","Cyst","Boil","Scab","Wound","Gash","Lacer","Punct",
+    "Skull","Spine","Rib","Femur","Sinew","Tendon","Gristle","Hemorrh","Thromb",
+    "Necrot","Putresc","Mortu","Funer","Flay","Skin","Autops","Cranial","Spleno",
+    "Charn","Cachect","Adipocere","Terat","Seps","Suppur","Absc","Exhum","Mortifi",
+    "Eviscer","Deglov","Excori","Sanguin","Necroph","Trepan","Aneurysm","Vomit",
+    "Slough","Exud","Purul","Putrid","Bloat","Ruptur","Dislocat","Carrion",
+    "Stench","Filth","Slime","Miasma","Morbid","Flayed","Drowned"],
+  mid: ["spawn","rend","gorg","churn","slath","writhe","belch","spew","clot",
+    "fiend","stalk","crawl","drip","seep","ooze","blight","murk","grime","mawl",
+    "gor","husk","abscess","chancre","carbuncle","effluvium","exudate","slough",
+    "putrescence","gangrene","mucous","necrosis","septic","suppurat","maggot",
+    "larvae","blowfly","botfly","swarm","excavat","perforat","pulveriz","liqu"],
+  suf: ["fiend","wraith","reaper","butcher","lord","spawn","shroud","casket",
+    "womb","pyre","altar","chalice","monolith","shrine","throne","vortex","abyss",
+    "chasm","mausoleum","ossuary","effigy","reliquary","sepulcher","catacomb",
+    "gallows","pit","eater","devourer","feaster","gurgler","sprayer","chewer",
+    "sternum","mandible","clavicle","tibia","fibula","patella","ulna","radius",
+    "sacrum","coccyx","hyoid","maxilla","cranium","vertebra","pelvis","scapula",
+    "xiphoid","calcaneus","trachea","bronchus","esophagus","pericardium","pleura",
+    "aorta","ventricle","atrium","duodenum","jejunum","ileum","meninges",
+    "cerebellum","medulla","retina","cochlea","larynx","pharynx","mesenter",
+    "dissection","autopsy","vivisection","exsanguination","putrefaction"],
+},
+grimdark: {
+  label: "⛪ Grimdark",
+  accent: "#8a6d1a", bright: "#d4af37", glow: "rgba(212,175,55,.35)",
+  pre: ["Sanct","Sacr","Blasphem","Heret","Apostat","Penitent","Flagell","Cenobit",
+    "Anchorit","Anathem","Excommunic","Inquisit","Confessor","Martyr","Reliqu",
+    "Thurib","Vesti","Pontif","Abbess","Cleric","Deacon","Sexton","Sacristan",
+    "Vesper","Matin","Psalmod","Liturg","Ecclesi","Ritual","Litani","Dirg",
+    "Requiem","Sermon","Catech","Doctorin","Crusad","Pilgrim","Zealot","Prophet",
+    "Psalm","Hymn","Gospel","Worship","Idol","Profan","Desecr","Consecr",
+    "Unholy","Impi","Sacril","Mortis","Vox","Umbra","Nox","Aeterna","Sanguis",
+    "Ossa","Cadav","Tenebr","Umbrar","Lucif","Malefic","Pontifex","Magos",
+    "Fabricat","Manifold","Machine","Imper","Warp","Purgat","Abyss","Tartar"],
+  mid: ["spawn","cult","rite","vigil","psalm","hymn","chant","creed","dogma",
+    "catechism","penance","shriving","flagellation","mortification","procession",
+    "pilgrimage","crusade","inquisition","purgation","ablution","anointment",
+    "consecration","desecration","immolation","incensation","blasphemy","heresy",
+    "apostasy","idolatry","profanation","sanctimony","cloister","sanctorum"],
+  suf: ["reliquary","sepulcher","psalter","breviary","missal","litany","liturgy",
+    "sermon","sacrament","vestment","thurible","censer","stigmata","viaticum",
+    "eucharist","communion","benediction","anathema","pyre","inquisition",
+    "martyrdom","abbey","vestry","belfry","steeple","nave","transept","cathedral",
+    "chapel","crypt","catacomb","ossuary","charnel","creed","catechism",
+    "doxology","offertory","introit","threnody","hymnody","requiem","shrine",
+    "altar","tabernacle","confessional","pulpit","manufactorum","citadel",
+    "bastion","redoubt","siege","trench","vigil","libation","oblation"],
+},
+black: {
+  label: "❄ Black",
+  accent: "#1a4d6b", bright: "#4da6d4", glow: "rgba(77,166,212,.35)",
+  pre: ["Frost","Winter","Is","Kald","Vinter","Natt","Mørk","Nacht","Grim","Varg",
+    "Ulv","Fjell","Sky","Storm","Nord","Norr","Ödemark","Öde","Vild","Vittra",
+    "Raven","Wolf","Ash","Ashen","Bleak","Blight","Frozen","Icy","Glacial",
+    "Hoarfrost","Sleet","Snow","Thorn","Troll","Trolld","Huld","Draug","Nix",
+    "Myrk","Vetr","Skimt","Skugg","Schatten","Welten","Eis","Kalt","Bore",
+    "Septentr","Aquilo","Auster","Gelu","Hibern","Bruma","Cinis","Ciner",
+    "Umbra","Noct","Vesper","Aster","Nihil","Vacu","Inan","Svart","Nocturn"],
+  mid: ["vinter","natt","mørke","frost","kulde","stein","berg","skog","mark",
+    "heim","gard","holt","fjell","dal","vik","fjord","myr","sump","skär",
+    "nacht","schnee","sturm","wind","wald","grimm","reich","hold","winter",
+    "storm","regen","nebel","dämmer","schwarz","froid","hiver","cendre",
+    "ombre","brume","givre","gel","nuit","zima","mróz","ciemn","zimn","wiatr"],
+  suf: ["fjord","tundra","barrow","blizzard","wraith","raven","wolf","vigil",
+    "solstice","equinox","firmament","abyss","void","throne","kingdom","dominion",
+    "reign","empire","citadel","fastness","keep","bastion","watch","ward",
+    "howling","shrieking","wailing","keening","dirge","requiem","elegy","lament",
+    "psalm","hymn","ritual","rite","sabbath","sabbat","coven","cult","circle",
+    "conclave","maw","chasm","rift","fissure","crevasse","glacier","permafrost",
+    "moraine","scree","talus","crag","tor","fell","fjeld","skog","mark"],
+},
+doom: {
+  label: "🕯 Doom",
+  accent: "#4a2a6b", bright: "#8a5cd4", glow: "rgba(138,92,212,.35)",
+  pre: ["Slow","Iron","Lead","Smoke","Ash","Rust","Dust","Tar","Coal","Salt",
+    "Stone","Slab","Bog","Marsh","Fog","Tide","Woe","Worm","Wyrm","Bell","Toll",
+    "Candle","Lantern","Hermit","Monk","Vicar","Reverend","Preacher","Baptist",
+    "Witch","Warlock","Coven","Oracle","Sabbath","Funer","Mourn","Weep","Wail",
+    "Sepulchr","Cemetery","Graveyard","Barrow","Tumulus","Cairn","Mound",
+    "Crypt","Tomb","Sarcoph","Ossuar","Charnel","Reliqu","Monol","Obelisk",
+    "Trilith","Ziggurat","Spire","Steeple","Belfr","Tollhouse","Vigil","Wake"],
+  mid: ["crawl","slouch","trudge","lumber","groan","creak","grind","crush",
+    "smolder","smoulder","fester","rot","bloom","spread","seep","pool","coagul",
+    "congeal","thicken","solidify","petrif","calcif","fossiliz","entomb",
+    "inter","inhume","sepulcher","memorial","memento","tolling","sludge"],
+  suf: ["sabbath","church","cathedral","chapel","choir","sermon","hymn","hymnal",
+    "dirge","requiem","elegy","lament","gospel","vigil","wake","funeral","hearse",
+    "casket","coffin","tomb","barrow","monolith","obelisk","ossuary","grave",
+    "graveyard","coven","ritual","temple","shrine","altar","sanctum","sanctuary",
+    "baptism","communion","benediction","vespers","matins","litany","psalm",
+    "pilgrim","hermit","reverend","prophet","oracle","sibyl","titan",
+    "mammoth","behemoth","leviathan","colossus","golem","wyrm","serpent"],
+},
+};
 
+/* Chaos: union of every theme's banks */
+const chaos = { label: "☠ Chaos", accent: "#3a3a3a", bright: "#9a9a9a",
+  glow: "rgba(154,154,154,.3)", pre: [], mid: [], suf: [] };
+for (const t of Object.values(THEMES))
+  { chaos.pre.push(...t.pre); chaos.mid.push(...t.mid); chaos.suf.push(...t.suf); }
+THEMES.chaos = chaos;
+
+const JOINERS = ["","","","-"," "];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
-function makeName(targetLen) {
-  let name = pick(PREFIXES);
+function makeName(theme, targetLen) {
+  const t = THEMES[theme];
+  let name = pick(t.pre);
   const joiner = pick(JOINERS);
   while (name.length + joiner.length + 6 < targetLen - 3) {
-    name += pick(MIDDLES);
-    if (Math.random() < 0.3) name += pick(["x","th","gh","rr","ck"]);
+    name += pick(t.mid);
+    if (Math.random() < 0.25) name += pick(["x","th","gh","rr","ck"]);
   }
-  return name + joiner + pick(SUFFIXES);
+  return name + joiner + pick(t.suf);
 }
 
 const $ = id => document.getElementById(id);
+let currentTheme = "gore";
+
+function setTheme(theme) {
+  currentTheme = theme;
+  const t = THEMES[theme];
+  const root = document.documentElement.style;
+  root.setProperty("--accent", t.accent);
+  root.setProperty("--accent-bright", t.bright);
+  root.setProperty("--glow", t.glow);
+  document.querySelectorAll(".theme-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.theme === theme));
+  generate();
+}
+
+const themesEl = $("themes");
+for (const [key, t] of Object.entries(THEMES)) {
+  const b = document.createElement("button");
+  b.className = "theme-btn";
+  b.dataset.theme = key;
+  b.textContent = t.label;
+  b.onclick = () => setTheme(key);
+  themesEl.appendChild(b);
+}
+
 const lengthEl = $("length"), lengthOut = $("lengthOut");
 lengthEl.addEventListener("input", () => lengthOut.textContent = lengthEl.value);
 
@@ -178,15 +362,14 @@ function render(names) {
 function generate() {
   const len = +lengthEl.value;
   const count = Math.max(1, Math.min(50, +$("count").value || 1));
-  const names = Array.from({length: count}, () => makeName(len));
-  render(names);
+  render(Array.from({length: count}, () => makeName(currentTheme, len)));
 }
 
 $("gen").addEventListener("click", generate);
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); generate(); }
 });
-generate();
+setTheme("gore");
 </script>
 </body>
 </html>
