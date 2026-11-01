@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""gorename — random metal/gore name generator.
+"""necrotrachea — random metal/gore name generator.
 
 Names are assembled from prefix / middle / suffix fragment banks and padded
 with middle fragments until the target character length (approx) is reached.
 
 Usage:
-    python gorename.py                     # 1 name, ~12 chars
-    python gorename.py -n 10               # 10 names
-    python gorename.py -l 20               # aim for ~20-char names
-    python gorename.py -n 5 -l 8 --sep ''  # 5 short glued names
+    python necrotrachea.py                     # 1 name, ~12 chars
+    python necrotrachea.py -n 10               # 10 names
+    python necrotrachea.py -l 20               # aim for ~20-char names
+    python necrotrachea.py -n 5 -l 8 --sep ''  # 5 short glued names
 """
 
 import argparse
