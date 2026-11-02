@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """necrotrachea — random metal/gore name generator.
 
-Themed word banks (gore/anatomy, grimdark/religious, black metal, doom, chaos)
-assembled to a target character length. Banks are generated from index.html
-to stay in sync with the web UI.
+Themed word banks (gore/anatomy, grimdark/religious, black metal, doom,
+hacking, chaos) paired into two-word names. Some first words change into
+adjectives. Generate one to four names at a time. The CLI mirrors index.html.
 
 Usage:
-    python necrotrachea.py                        # 1 gore name, ~14 chars
-    python necrotrachea.py -t grimdark -n 10      # 10 grimdark names
-    python necrotrachea.py -t black -l 24         # long frostbitten names
+    python necrotrachea.py                         # 2 two-word gore names
+    python necrotrachea.py -t grimdark -n 4        # 4 grimdark names
+    python necrotrachea.py -t gore -t hacking -n 3 # 3 mixed names
 """
 
 import argparse
@@ -1417,35 +1417,127 @@ THEMES = json.loads(r"""
 }
 """)
 
-JOINERS = ["", "", "", "-", " "]
+THEMES["hacking"] = {
+    "label": "Hacking",
+    "pre": ["Subroutine", "Kernel", "Daemon", "Cipher", "Packet", "Proxy",
+            "Payload", "Backdoor", "Shellcode", "Firmware", "Rootkit",
+            "Botnet", "Buffer", "Checksum", "Opcode", "Exploit", "Glitch",
+            "Ghost", "Shadow", "Null", "Hex", "Binary", "Byte", "Bit",
+            "Stack", "Heap", "Fork", "Thread", "Socket", "Port", "Crypt",
+            "Malware", "Trojan", "Virus", "Worm", "Phantom", "Signal",
+            "Firewall", "Terminal", "Console", "Syntax", "Vector",
+            "Neural", "Rogue", "Zero", "Blackhat", "Whitehat", "Databreach"],
+    "mid": ["inject", "splice", "crack", "patch", "spoof", "trace",
+            "scrape", "decrypt", "encrypt", "overflow", "exploit", "pivot",
+            "tunnel", "hijack", "reroute", "exfil", "deface", "shard",
+            "fork", "reboot", "compile", "corrupt", "rewrite", "scramble",
+            "leak", "scan", "sniff", "brute", "fuzz", "ping", "probe", "hash"],
+    "suf": ["routine", "daemon", "kernel", "cipher", "payload", "socket",
+            "packet", "buffer", "bit", "byte", "null", "root", "shell",
+            "stack", "heap", "fork", "thread", "cache", "script", "port",
+            "proxy", "worm", "trojan", "virus", "hash", "key", "crypt",
+            "signal", "backdoor", "rootkit", "datastream", "handshake",
+            "checksum", "firewall", "terminal", "console", "opcode",
+            "exploit"],
+}
+for bank in ("pre", "mid", "suf"):
+    THEMES["chaos"][bank].extend(THEMES["hacking"][bank])
+
+# Complete words for the first position; many original prefixes are stems.
+FIRST_WORDS = {
+    "gore": """Gore Blood Corpse Rot Butcher Gut Flesh Bone Marrow Grave Crypt
+        Cadaver Vile Fetid Maggot Worm Bile Phlegm Pus Ulcer Cyst Boil Scab
+        Wound Gash Skull Spine Rib Femur Sinew Tendon Gristle Flay Skin Trepan
+        Vomit Slough Putrid Bloat Carrion Stench Filth Slime Miasma Morbid
+        Flayed Drowned""".split(),
+    "grimdark": """Penitent Confessor Martyr Abbess Cleric Deacon Sexton Sacristan
+        Vesper Requiem Sermon Pilgrim Zealot Prophet Psalm Hymn Gospel Worship
+        Idol Unholy Mortis Vox Umbra Nox Aeterna Sanguis Ossa Magos Machine
+        Warp Abyss""".split(),
+    "black": """Frost Winter Nacht Grim Varg Mørk Sky Storm Raven Wolf Ash
+        Ashen Bleak Blight Frozen Icy Glacial Hoarfrost Sleet Snow Thorn Troll
+        Draug Schatten Welten Eis Kalt Umbra Svart""".split(),
+    "doom": """Slow Iron Lead Smoke Ash Rust Dust Tar Coal Salt Stone Slab Bog Marsh
+        Fog Tide Woe Worm Wyrm Bell Toll Candle Lantern Hermit Monk Vicar
+        Reverend Preacher Baptist Witch Warlock Coven Oracle Sabbath Mourn Weep
+        Wail Cemetery Graveyard Barrow Tumulus Cairn Mound Crypt Tomb Charnel
+        Obelisk Spire Steeple Tollhouse Vigil Wake""".split(),
+    "hacking": """Subroutine Kernel Daemon Cipher Packet Proxy Payload Backdoor
+        Shellcode Firmware Rootkit Botnet Buffer Checksum Opcode Exploit Glitch
+        Ghost Shadow Null Hex Binary Byte Bit Stack Heap Fork Thread Socket Port
+        Crypt Malware Trojan Virus Worm Phantom Signal Firewall Terminal Console
+        Syntax Vector Neural Rogue Zero Blackhat Whitehat Databreach""".split(),
+}
+FIRST_WORDS["chaos"] = [word for key, bank in FIRST_WORDS.items()
+                        for word in bank]
+
+# Hand-picked modifier forms; arbitrary suffixes make broken English.
+MODIFIERS = {
+    "Gore": ["Gory"], "Blood": ["Bloodstained", "Bloodsoaked"],
+    "Rot": ["Rotten"], "Bone": ["Boneless", "Bonebound"],
+    "Grave": ["Graven", "Gravebound"], "Maggot": ["Maggotridden"],
+    "Worm": ["Wormridden"], "Bile": ["Bilious"], "Pus": ["Purulent"],
+    "Wound": ["Wounded"], "Flay": ["Flayed"], "Skin": ["Skinless"],
+    "Filth": ["Filthy"], "Slime": ["Slimy"],
+    "Martyr": ["Martyred"], "Zealot": ["Zealous"],
+    "Prophet": ["Prophetic"], "Idol": ["Idolatrous"],
+    "Warp": ["Warped"], "Abyss": ["Abyssal"], "Machine": ["Mechanical"],
+    "Frost": ["Frostbitten", "Frostbound"],
+    "Winter": ["Wintry", "Winterbound"],
+    "Storm": ["Stormbound", "Stormtorn"],
+    "Snow": ["Snowbound", "Snowblind"], "Ash": ["Ashen"],
+    "Blight": ["Blighted"], "Thorn": ["Thornbound"],
+    "Wolf": ["Wolven"], "Sky": ["Skybound"], "Sleet": ["Sleetbound"],
+    "Smoke": ["Smokechoked", "Smoky"], "Rust": ["Rusted", "Rustbound"],
+    "Dust": ["Dusty", "Dustbound"], "Stone": ["Stony", "Stonebound"],
+    "Iron": ["Ironclad"], "Coal": ["Coalblack"], "Salt": ["Saltworn"],
+    "Marsh": ["Marshbound"], "Bog": ["Bogbound"],
+    "Fog": ["Fogbound", "Foggy"], "Tide": ["Tidal"],
+    "Woe": ["Woeful"], "Candle": ["Candlelit"], "Tomb": ["Tombbound"],
+    "Crypt": ["Cryptbound"], "Mourn": ["Mourning"],
+    "Weep": ["Weeping"], "Wail": ["Wailing"], "Toll": ["Tolling"],
+    "Cipher": ["Enciphered"], "Packet": ["Packetized"],
+    "Buffer": ["Buffered"], "Glitch": ["Glitched"],
+    "Shadow": ["Shadowed"], "Null": ["Nullified"],
+    "Virus": ["Viral"], "Firewall": ["Firewalled"],
+    "Zero": ["Zeroed"], "Rootkit": ["Rooted"],
+    "Malware": ["Malicious"], "Thread": ["Threaded"], "Fork": ["Forked"],
+}
 
 
-def make_name(theme, target_len, rng):
-    t = THEMES[theme]
-    name = rng.choice(t["pre"])
-    joiner = rng.choice(JOINERS)
-    while len(name) + len(joiner) + 6 < target_len - 3:
-        name += rng.choice(t["mid"])
-        if rng.random() < 0.25:
-            name += rng.choice(["x", "th", "gh", "rr", "ck"])
-    return name + joiner + rng.choice(t["suf"])
+def maybe_modify(word, rng):
+    variants = MODIFIERS.get(word)
+    return rng.choice(variants) if variants and rng.random() < 0.5 else word
+
+
+def make_name(themes, rng):
+    theme_keys = [themes] if isinstance(themes, str) else list(dict.fromkeys(themes))
+    if not theme_keys:
+        raise ValueError("select at least one theme")
+    first_theme = rng.choice(theme_keys)
+    other_themes = [key for key in theme_keys if key != first_theme]
+    second_theme = rng.choice(other_themes or [first_theme])
+    base_first = rng.choice(FIRST_WORDS[first_theme])
+    first = maybe_modify(base_first, rng)
+    endings = [word for word in THEMES[second_theme]["suf"]
+               if word != "mesenter" and word.casefold() != base_first.casefold()
+               and word.casefold() != first.casefold()]
+    return f"{first} {rng.choice(endings).capitalize()}"
 
 
 def main():
     ap = argparse.ArgumentParser(description="Random metal/gore name generator")
-    ap.add_argument("-t", "--theme", choices=sorted(THEMES), default="gore",
-                    help="word theme (default gore)")
-    ap.add_argument("-n", "--count", type=int, default=1,
-                    help="how many names to generate (default 1)")
-    ap.add_argument("-l", "--length", type=int, default=14,
-                    help="target name length in characters (default 14)")
+    ap.add_argument("-t", "--theme", choices=sorted(THEMES), action="append",
+                    help="theme; repeat to mix themes (default gore)")
+    ap.add_argument("-n", "--count", type=int, choices=range(1, 5), default=2,
+                    metavar="{1,2,3,4}", help="names to generate (default 2)")
     ap.add_argument("-s", "--seed", type=int, default=None,
                     help="random seed for reproducibility")
     args = ap.parse_args()
 
     rng = random.Random(args.seed)
     for _ in range(args.count):
-        print(make_name(args.theme, args.length, rng))
+        print(make_name(args.theme or ["gore"], rng))
 
 
 if __name__ == "__main__":

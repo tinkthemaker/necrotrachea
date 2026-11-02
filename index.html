@@ -3,187 +3,457 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>necrotrachea — metal/gore name generator</title>
+<title>necrotrachea — metal, gore, and code name generator</title>
 <style>
   :root {
-    --bg: #0a0a0a;
-    --panel: #141414;
-    --border: #2a2a2a;
-    --text: #d4d4d4;
-    --dim: #777;
+    --bg: #0c0b0a;
+    --paper: #e5dfd0;
+    --muted: #a29a89;
+    --rule: #5a544a;
     --accent: #b3161c;
     --accent-bright: #e5252d;
     --glow: rgba(229,37,45,.35);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    margin: 0;
     min-height: 100vh;
+    background: var(--bg);
+    color: var(--paper);
+    font-family: 'Arial Narrow', 'Segoe UI', sans-serif;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: .17;
+    background: repeating-linear-gradient(
+      0deg, transparent 0 2px, rgba(229,223,208,.12) 2px 3px
+    );
+    mix-blend-mode: screen;
+  }
+  .dither {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(70vw, 900px);
+    height: 780px;
+    pointer-events: none;
+    opacity: .42;
+    background: repeating-conic-gradient(
+      from 45deg, var(--accent) 0 25%, transparent 0 50%
+    ) 0 0 / 4px 4px;
+    mask-image: radial-gradient(
+      ellipse at 72% 20%, #000 0 10%, rgba(0,0,0,.8) 26%, transparent 70%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse at 72% 20%, #000 0 10%, rgba(0,0,0,.8) 26%, transparent 70%
+    );
+  }
+  .dither::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: .55;
+    background: radial-gradient(
+      circle, var(--paper) 0 1px, transparent 1.2px
+    ) 0 0 / 7px 7px;
+    mask-image: linear-gradient(110deg, transparent 20%, #000 75%);
+    -webkit-mask-image: linear-gradient(110deg, transparent 20%, #000 75%);
+  }
+  .page {
+    width: min(100%, 1240px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 28px clamp(20px, 4vw, 58px) 36px;
+    position: relative;
+    isolation: isolate;
+  }
+  .eyebrow, .section-head, .field-label, .subhead, footer, .hero-stamp {
+    font-family: 'Courier New', monospace;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+  .eyebrow, .subhead, .section-head, footer {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem 1rem 4rem;
-  }
-  /* ---- 1-bit ordered dither: four density bands radiating from the title.
-   * Pure CSS: solid core, then 50%, 25%, 12.5% checker/dot patterns, each
-   * masked to its own radial band. No image assets. */
-  .dither { position: fixed; inset: 0; z-index: -2; pointer-events: none;
-    background: var(--accent); opacity: .32;
-    mask-image: radial-gradient(circle at 50% 6%, #000 0%, #000 4%, transparent 7%);
-    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 0%, #000 4%, transparent 7%);
-  }
-  .dither::before { content: ""; position: absolute; inset: 0;
-    background: var(--accent); opacity: .30;
-    background-image:
-      repeating-conic-gradient(var(--accent) 0% 25%, transparent 25% 50%);
-    background-size: 3px 3px;
-    mask-image: radial-gradient(circle at 50% 6%, #000 4%, #000 11%, transparent 15%);
-    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 4%, #000 11%, transparent 15%);
-  }
-  .dither::after { content: ""; position: absolute; inset: 0;
-    background-image:
-      radial-gradient(circle at 25% 25%, var(--accent) 0 22%, transparent 25%);
-    background-size: 4px 4px; opacity: .28;
-    mask-image: radial-gradient(circle at 50% 6%, #000 11%, #000 22%, transparent 27%);
-    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 11%, #000 22%, transparent 27%);
-  }
-  body::before { content: ""; position: fixed; inset: 0; z-index: -3; pointer-events: none;
-    background-image:
-      radial-gradient(circle at 25% 25%, var(--accent) 0 20%, transparent 23%),
-      radial-gradient(circle at 75% 75%, var(--accent) 0 20%, transparent 23%);
-    background-size: 8px 8px; opacity: .18;
-    mask-image: radial-gradient(circle at 50% 6%, #000 22%, #000 42%, transparent 60%);
-    -webkit-mask-image: radial-gradient(circle at 50% 6%, #000 22%, #000 42%, transparent 60%);
-  }
-  /* subtle dither texture on panels */
-  .controls, .name, .theme-btn {
-    background-image:
-      repeating-conic-gradient(rgba(255,255,255,.025) 0% 25%, transparent 25% 50%);
-    background-size: 2px 2px;
-  }
-
-  h1 {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: clamp(2rem, 8vw, 3.5rem);
-    letter-spacing: 0.06em;
-    color: var(--accent-bright);
-    text-transform: lowercase;
-    margin-bottom: .25rem;
-    text-shadow: 0 0 18px var(--glow);
-  }
-  .tagline { color: var(--dim); font-size: .85rem; margin-bottom: 1.5rem; }
-  .themes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .5rem;
-    justify-content: center;
-    margin-bottom: 1.5rem;
-    max-width: 480px;
-  }
-  .theme-btn {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--dim);
-    border-radius: 999px;
-    padding: .45rem 1rem;
-    font-size: .85rem;
-    letter-spacing: .05em;
-    cursor: pointer;
-    transition: all .15s;
-  }
-  .theme-btn:hover { color: var(--text); border-color: var(--dim); }
-  .theme-btn.active {
-    color: #fff;
-    border-color: var(--accent-bright);
-    background: var(--accent);
-  }
-  .controls {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.25rem;
-    width: 100%;
-    max-width: 480px;
-    display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     gap: 1rem;
   }
-  .row { display: flex; align-items: center; gap: .75rem; }
-  .row label { flex: 0 0 7.5rem; color: var(--dim); font-size: .85rem; }
-  .row output { flex: 0 0 2.5rem; text-align: right; color: var(--accent-bright); font-weight: 600; }
-  input[type=range] { flex: 1; accent-color: var(--accent); }
-  input[type=number] {
-    flex: 1; background: var(--bg); color: var(--text);
-    border: 1px solid var(--border); border-radius: 4px;
-    padding: .4rem .6rem; font-size: 1rem;
+  .eyebrow {
+    padding-bottom: 13px;
+    border-bottom: 1px solid var(--paper);
   }
-  button {
+  .eyebrow span:last-child { color: var(--accent-bright); }
+  .title-wrap {
+    min-height: 365px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 30px 0 28px;
+    border-bottom: 6px double var(--paper);
+  }
+  .title-wrap::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -10px;
+    width: 29%;
+    height: 8px;
     background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: .8rem;
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: .08em;
+    transform: skewX(-28deg);
+  }
+  h1 {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    font-family: Impact, 'Arial Black', 'Arial Narrow', sans-serif;
+    font-size: clamp(5rem, 11.2vw, 10rem);
+    font-weight: 900;
+    letter-spacing: -.055em;
+    line-height: .94;
+    text-transform: uppercase;
+    text-shadow: 3px 3px 0 var(--accent);
+  }
+  h1 span { display: block; }
+  h1 span:last-child { margin-left: .13em; }
+  .hero-stamp {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    bottom: 38px;
+    width: 180px;
+    padding: 15px 14px;
+    border: 2px solid var(--accent-bright);
+    color: var(--accent-bright);
+    text-align: center;
+    transform: rotate(-8deg);
+    background: rgba(12,11,10,.8);
+    box-shadow: 3px 3px 0 rgba(12,11,10,.8);
+  }
+  .hero-stamp strong {
+    display: block;
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 2.5rem;
+    line-height: 1;
+    letter-spacing: -.02em;
+  }
+  .subhead {
+    padding-top: 14px;
+    color: var(--muted);
+  }
+  .subhead strong { color: var(--paper); }
+  .workbench {
+    display: grid;
+    grid-template-columns: minmax(245px, 320px) minmax(0, 1fr);
+    gap: clamp(36px, 6vw, 88px);
+    align-items: start;
+    margin-top: 72px;
+  }
+  .section-head {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--paper);
+    color: var(--accent-bright);
+  }
+  .section-head span:last-child { color: var(--muted); }
+  .field-label {
+    margin: 28px 0 8px;
+    color: var(--muted);
+  }
+  .themes { display: grid; }
+  .theme-btn {
+    width: 100%;
+    min-height: 51px;
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 34px 1fr 18px;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: transparent;
+    color: var(--paper);
+    font-family: Impact, 'Arial Narrow', sans-serif;
+    font-size: 1.35rem;
+    letter-spacing: .025em;
+    line-height: 1;
+    text-align: left;
     text-transform: uppercase;
     cursor: pointer;
-    transition: background .15s;
+    transition: background .16s, padding-left .16s, color .16s;
   }
-  button:hover { background: var(--accent-bright); }
-  button:active { transform: translateY(1px); }
-  #names {
+  .theme-btn::before {
+    content: attr(data-index);
+    font-family: 'Courier New', monospace;
+    font-size: .65rem;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .theme-btn::after {
+    content: "+";
+    justify-self: end;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    color: var(--muted);
+  }
+  .theme-btn:hover {
+    padding-left: 18px;
+    background: rgba(229,223,208,.08);
+  }
+  .theme-btn.active {
+    padding-left: 18px;
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-bright);
+  }
+  .theme-btn.active::before, .theme-btn.active::after { color: #fff; }
+  .controls { margin-top: 30px; border-top: 1px solid var(--paper); }
+  .row {
+    min-height: 72px;
+    display: grid;
+    grid-template-columns: 85px 1fr 38px;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .row label {
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .row output {
+    color: var(--paper);
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 2.2rem;
+    line-height: 1;
+    text-align: right;
+  }
+  input[type=range] {
     width: 100%;
-    max-width: 480px;
-    margin-top: 1.5rem;
+    accent-color: var(--accent-bright);
+    cursor: pointer;
+  }
+  #gen {
+    width: 100%;
+    min-height: 70px;
+    margin-top: 24px;
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    clip-path: polygon(0 0, 97% 0, 100% 16%, 100% 100%, 3% 100%, 0 84%);
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: 2rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .16s, transform .16s;
+  }
+  #gen:hover { background: var(--accent-bright); transform: translate(-2px, -2px); }
+  #gen:active { transform: translate(0, 0); }
+  .microcopy {
+    margin: 12px 0 0;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+    font-size: .65rem;
+    letter-spacing: .09em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+  .output { position: relative; min-width: 0; }
+  .output::before {
+    content: "";
+    position: absolute;
+    top: 49px;
+    right: -15px;
+    width: 170px;
+    height: 170px;
+    pointer-events: none;
+    opacity: .26;
+    background: repeating-conic-gradient(
+      var(--accent) 0 25%, transparent 0 50%
+    ) 0 0 / 3px 3px;
+    mask-image: radial-gradient(circle, #000 0 16%, transparent 72%);
+    -webkit-mask-image: radial-gradient(circle, #000 0 16%, transparent 72%);
+  }
+  .output-intro {
     display: flex;
-    flex-direction: column;
-    gap: .5rem;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+    margin: 24px 0 16px;
+  }
+  .output-intro h2 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(2.2rem, 4vw, 3.8rem);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -.07em;
+    line-height: .95;
+  }
+  .output-intro p {
+    max-width: 150px;
+    margin: 0;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+    font-size: .65rem;
+    letter-spacing: .06em;
+    line-height: 1.4;
+    text-align: right;
+    text-transform: uppercase;
+  }
+  #names {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    border-top: 1px solid var(--paper);
   }
   .name {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: 4px;
-    padding: .7rem .9rem;
-    font-family: Georgia, serif;
-    font-size: 1.15rem;
-    letter-spacing: .03em;
+    position: relative;
+    width: 100%;
+    min-height: 105px;
+    padding: 31px 70px 34px 33px;
+    border: 0;
+    border-bottom: 1px solid var(--rule);
+    background: transparent;
+    color: var(--paper);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(1.8rem, 3.2vw, 3.3rem);
+    font-weight: 700;
+    letter-spacing: -.065em;
+    line-height: 1.08;
+    text-align: left;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
     cursor: pointer;
-    transition: border-color .15s;
-    word-break: break-all;
+    transition: color .16s, background .16s;
   }
-  .name:hover { border-color: var(--accent); }
-  .name.copied { color: var(--accent-bright); }
-  footer { margin-top: 2.5rem; color: var(--dim); font-size: .75rem; }
-  footer a { color: var(--dim); }
+  .name::before {
+    content: attr(data-index);
+    position: absolute;
+    top: 14px;
+    left: 0;
+    color: var(--accent-bright);
+    font-family: 'Courier New', monospace;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .name::after {
+    content: "COPY +";
+    position: absolute;
+    right: 2px;
+    bottom: 13px;
+    color: var(--muted);
+    font-family: 'Courier New', monospace;
+    font-size: .58rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+  .name:hover {
+    color: var(--accent-bright);
+    background: repeating-conic-gradient(
+      rgba(229,223,208,.045) 0 25%, transparent 0 50%
+    ) 0 0 / 3px 3px;
+  }
+  .name.copied::after { content: "COPIED"; color: var(--accent-bright); }
+  button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 3px;
+  }
+  footer {
+    margin-top: 80px;
+    padding-top: 15px;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+  }
+  footer a { color: var(--paper); text-decoration-thickness: 1px; }
+  footer a:hover { color: var(--accent-bright); }
+  @media (max-width: 820px) {
+    .title-wrap { min-height: 300px; }
+    h1 { font-size: clamp(4.2rem, 12vw, 7rem); }
+    .workbench { grid-template-columns: 1fr; gap: 60px; margin-top: 52px; }
+    .themes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+    .controls { max-width: 440px; }
+  }
+  @media (max-width: 560px) {
+    .page { padding: 18px 18px 28px; }
+    .eyebrow, .subhead, footer { font-size: .58rem; }
+    .eyebrow span:last-child, .subhead span:last-child { text-align: right; }
+    .title-wrap { min-height: 240px; padding: 22px 0; }
+    h1 { font-size: clamp(3.2rem, 13.8vw, 5.4rem); }
+    .hero-stamp { right: 0; bottom: 14px; width: 105px; padding: 7px; font-size: .5rem; }
+    .hero-stamp strong { font-size: 1.5rem; }
+    .workbench { margin-top: 44px; }
+    .themes { grid-template-columns: 1fr; }
+    .name { min-height: 90px; padding-right: 24px; }
+    .output-intro h2 { font-size: 2.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0s !important; }
+  }
 </style>
 </head>
 <body>
 <div class="dither" aria-hidden="true"></div>
-<h1>necrotrachea</h1>
-<p class="tagline">random metal / gore name generator</p>
+<main class="page">
+  <header>
+    <div class="eyebrow">
+      <span>N/T &nbsp; // &nbsp; RANDOM NAME FOUNDRY</span>
+      <span>ISSUE 001 &nbsp; / &nbsp; NO CLEAN CUTS</span>
+    </div>
+    <div class="title-wrap">
+      <h1><span>NECRO</span><span>TRACHEA</span></h1>
+      <div class="hero-stamp" aria-label="Two words, one name">
+        <strong>2 → 1</strong>
+        TWO WORDS<br>ONE NAME
+      </div>
+    </div>
+    <div class="subhead">
+      <span><strong>METAL / GORE / CODE</strong> &nbsp; NAME GENERATOR</span>
+      <span>ONE TO FOUR NAMES</span>
+    </div>
+  </header>
 
-<div class="themes" id="themes"></div>
+  <div class="workbench">
+    <aside class="controls-side" aria-label="Name settings">
+      <div class="section-head"><span>01 / THE FORMULA</span><span id="selectionCount">01 ACTIVE</span></div>
+      <p class="field-label">CHOOSE BLOODLINES</p>
+      <div class="themes" id="themes"></div>
+      <div class="controls">
+        <div class="row">
+          <label for="nameCount">NAMES</label>
+          <input type="range" id="nameCount" min="1" max="4" value="2">
+          <output id="nameCountOut" for="nameCount">2</output>
+        </div>
+        <button id="gen" type="button">REND →</button>
+      </div>
+      <p class="microcopy">TWO WORDS, TWO LISTS. SOMETIMES FROST BECOMES FROSTBITTEN.</p>
+    </aside>
 
-<div class="controls">
-  <div class="row">
-    <label for="length">length ≈</label>
-    <input type="range" id="length" min="6" max="40" value="14">
-    <output id="lengthOut">14</output>
+    <section class="output" aria-label="Generated names">
+      <div class="section-head"><span>02 / THE SPOILS</span><span id="resultCount">08 IMPRESSIONS</span></div>
+      <div class="output-intro">
+        <h2>Fresh cuts.</h2>
+        <p>CLICK A NAME<br>TO COPY IT</p>
+      </div>
+      <div id="names" aria-live="polite"></div>
+    </section>
   </div>
-  <div class="row">
-    <label for="count">names</label>
-    <input type="number" id="count" min="1" max="50" value="8">
-  </div>
-  <button id="gen">Rend</button>
-</div>
 
-<div id="names"></div>
-
-<footer><a href="https://github.com/tinkthemaker/necrotrachea">source</a></footer>
+  <footer>
+    <span>NECROTRACHEA &nbsp; / &nbsp; ISSUE 001</span>
+    <a href="https://github.com/tinkthemaker/necrotrachea">SOURCE / GITHUB ↗</a>
+  </footer>
+</main>
 
 <script>
 /* Word banks mined from death/black/doom metal name corpora (~3000 names),
@@ -290,86 +560,193 @@ doom: {
     "pilgrim","hermit","reverend","prophet","oracle","sibyl","titan",
     "mammoth","behemoth","leviathan","colossus","golem","wyrm","serpent"],
 },
+hacking: {
+  label: "Hacking",
+  accent: "#416318", bright: "#b8e85b", glow: "rgba(184,232,91,.35)",
+  pre: ["Subroutine","Kernel","Daemon","Cipher","Packet","Proxy","Payload",
+    "Backdoor","Shellcode","Firmware","Rootkit","Botnet","Buffer","Checksum",
+    "Opcode","Exploit","Glitch","Ghost","Shadow","Null","Hex","Binary","Byte",
+    "Bit","Stack","Heap","Fork","Thread","Socket","Port","Crypt","Malware",
+    "Trojan","Virus","Worm","Phantom","Signal","Firewall","Terminal","Console",
+    "Syntax","Vector","Neural","Rogue","Zero","Blackhat","Whitehat","Databreach"],
+  mid: ["inject","splice","crack","patch","spoof","trace","scrape","decrypt",
+    "encrypt","overflow","exploit","pivot","tunnel","hijack","reroute",
+    "exfil","deface","shard","fork","reboot","compile","corrupt","rewrite",
+    "scramble","leak","scan","sniff","brute","fuzz","ping","probe","hash"],
+  suf: ["routine","daemon","kernel","cipher","payload","socket","packet",
+    "buffer","bit","byte","null","root","shell","stack","heap","fork",
+    "thread","cache","script","port","proxy","worm","trojan","virus","hash",
+    "key","crypt","signal","backdoor","rootkit","datastream","handshake",
+    "checksum","firewall","terminal","console","opcode","exploit"],
+},
 };
 
 /* Chaos: union of every theme's banks */
-const chaos = { label: "☠ Chaos", accent: "#3a3a3a", bright: "#9a9a9a",
-  glow: "rgba(154,154,154,.3)", pre: [], mid: [], suf: [] };
+const chaos = { label: "☠ Chaos", accent: "#6d2768", bright: "#dd6ad5",
+  glow: "rgba(221,106,213,.35)", pre: [], mid: [], suf: [] };
 for (const t of Object.values(THEMES))
   { chaos.pre.push(...t.pre); chaos.mid.push(...t.mid); chaos.suf.push(...t.suf); }
 THEMES.chaos = chaos;
 
-const JOINERS = ["","","","-"," "];
-const pick = a => a[Math.floor(Math.random() * a.length)];
+/* Complete words for the first position; many original prefixes are stems. */
+const FIRST_WORDS = {
+  gore: ["Gore","Blood","Corpse","Rot","Butcher","Gut","Flesh","Bone",
+    "Marrow","Grave","Crypt","Cadaver","Vile","Fetid","Maggot","Worm",
+    "Bile","Phlegm","Pus","Ulcer","Cyst","Boil","Scab","Wound","Gash",
+    "Skull","Spine","Rib","Femur","Sinew","Tendon","Gristle","Flay",
+    "Skin","Trepan","Vomit","Slough","Putrid","Bloat","Carrion","Stench",
+    "Filth","Slime","Miasma","Morbid","Flayed","Drowned"],
+  grimdark: ["Penitent","Confessor","Martyr","Abbess","Cleric","Deacon",
+    "Sexton","Sacristan","Vesper","Requiem","Sermon","Pilgrim","Zealot",
+    "Prophet","Psalm","Hymn","Gospel","Worship","Idol","Unholy","Mortis",
+    "Vox","Umbra","Nox","Aeterna","Sanguis","Ossa","Magos","Machine",
+    "Warp","Abyss"],
+  black: ["Frost","Winter","Nacht","Grim","Varg","Mørk","Sky","Storm",
+    "Raven","Wolf","Ash","Ashen","Bleak","Blight","Frozen","Icy",
+    "Glacial","Hoarfrost","Sleet","Snow","Thorn","Troll","Draug",
+    "Schatten","Welten","Eis","Kalt","Umbra","Svart"],
+  doom: ["Slow","Iron","Lead","Smoke","Ash","Rust","Dust","Tar","Coal",
+    "Salt","Stone","Slab","Bog","Marsh","Fog","Tide","Woe","Worm",
+    "Wyrm","Bell","Toll","Candle","Lantern","Hermit","Monk","Vicar",
+    "Reverend","Preacher","Baptist","Witch","Warlock","Coven","Oracle",
+    "Sabbath","Mourn","Weep","Wail","Cemetery","Graveyard","Barrow",
+    "Tumulus","Cairn","Mound","Crypt","Tomb","Charnel","Obelisk",
+    "Spire","Steeple","Tollhouse","Vigil","Wake"],
+  hacking: ["Subroutine","Kernel","Daemon","Cipher","Packet","Proxy",
+    "Payload","Backdoor","Shellcode","Firmware","Rootkit","Botnet",
+    "Buffer","Checksum","Opcode","Exploit","Glitch","Ghost","Shadow",
+    "Null","Hex","Binary","Byte","Bit","Stack","Heap","Fork","Thread",
+    "Socket","Port","Crypt","Malware","Trojan","Virus","Worm","Phantom",
+    "Signal","Firewall","Terminal","Console","Syntax","Vector","Neural",
+    "Rogue","Zero","Blackhat","Whitehat","Databreach"],
+};
+FIRST_WORDS.chaos = Object.values(FIRST_WORDS).flat();
 
-function makeName(theme, targetLen) {
-  const t = THEMES[theme];
-  let name = pick(t.pre);
-  const joiner = pick(JOINERS);
-  while (name.length + joiner.length + 6 < targetLen - 3) {
-    name += pick(t.mid);
-    if (Math.random() < 0.25) name += pick(["x","th","gh","rr","ck"]);
-  }
-  return name + joiner + pick(t.suf);
+/* Hand-picked modifier forms; arbitrary suffixes make broken English. */
+const MODIFIERS = {
+  Gore: ["Gory"], Blood: ["Bloodstained", "Bloodsoaked"],
+  Rot: ["Rotten"], Bone: ["Boneless", "Bonebound"],
+  Grave: ["Graven", "Gravebound"], Maggot: ["Maggotridden"],
+  Worm: ["Wormridden"], Bile: ["Bilious"], Pus: ["Purulent"],
+  Wound: ["Wounded"], Flay: ["Flayed"], Skin: ["Skinless"],
+  Filth: ["Filthy"], Slime: ["Slimy"],
+  Martyr: ["Martyred"], Zealot: ["Zealous"],
+  Prophet: ["Prophetic"], Idol: ["Idolatrous"],
+  Warp: ["Warped"], Abyss: ["Abyssal"], Machine: ["Mechanical"],
+  Frost: ["Frostbitten", "Frostbound"],
+  Winter: ["Wintry", "Winterbound"],
+  Storm: ["Stormbound", "Stormtorn"],
+  Snow: ["Snowbound", "Snowblind"], Ash: ["Ashen"],
+  Blight: ["Blighted"], Thorn: ["Thornbound"],
+  Wolf: ["Wolven"], Sky: ["Skybound"], Sleet: ["Sleetbound"],
+  Smoke: ["Smokechoked", "Smoky"], Rust: ["Rusted", "Rustbound"],
+  Dust: ["Dusty", "Dustbound"], Stone: ["Stony", "Stonebound"],
+  Iron: ["Ironclad"], Coal: ["Coalblack"], Salt: ["Saltworn"],
+  Marsh: ["Marshbound"], Bog: ["Bogbound"],
+  Fog: ["Fogbound", "Foggy"], Tide: ["Tidal"],
+  Woe: ["Woeful"], Candle: ["Candlelit"], Tomb: ["Tombbound"],
+  Crypt: ["Cryptbound"], Mourn: ["Mourning"],
+  Weep: ["Weeping"], Wail: ["Wailing"], Toll: ["Tolling"],
+  Cipher: ["Enciphered"], Packet: ["Packetized"],
+  Buffer: ["Buffered"], Glitch: ["Glitched"],
+  Shadow: ["Shadowed"], Null: ["Nullified"],
+  Virus: ["Viral"], Firewall: ["Firewalled"],
+  Zero: ["Zeroed"], Rootkit: ["Rooted"],
+  Malware: ["Malicious"], Thread: ["Threaded"], Fork: ["Forked"],
+};
+
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const maybeModify = word => MODIFIERS[word] && Math.random() < 0.5
+  ? pick(MODIFIERS[word]) : word;
+
+function makeName(themeKeys) {
+  const firstTheme = pick(themeKeys);
+  const secondTheme = themeKeys.length === 1 ? firstTheme :
+    pick(themeKeys.filter(key => key !== firstTheme));
+  const baseFirst = pick(FIRST_WORDS[firstTheme]);
+  const first = maybeModify(baseFirst);
+  const second = pick(THEMES[secondTheme].suf.filter(word =>
+    word !== "mesenter" && word.toLowerCase() !== baseFirst.toLowerCase() &&
+    word.toLowerCase() !== first.toLowerCase()));
+  return `${first} ${second.charAt(0).toUpperCase() + second.slice(1)}`;
 }
 
 const $ = id => document.getElementById(id);
-let currentTheme = "gore";
+const selectedThemes = new Set(["gore"]);
 
-function setTheme(theme) {
-  currentTheme = theme;
-  const t = THEMES[theme];
+function refreshThemes() {
+  const keys = [...selectedThemes];
+  const t = keys.length === 1 ? THEMES[keys[0]] : THEMES.chaos;
   const root = document.documentElement.style;
   root.setProperty("--accent", t.accent);
   root.setProperty("--accent-bright", t.bright);
   root.setProperty("--glow", t.glow);
-  document.querySelectorAll(".theme-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.theme === theme));
+  document.querySelectorAll(".theme-btn").forEach(b => {
+    const active = selectedThemes.has(b.dataset.theme);
+    b.classList.toggle("active", active);
+    b.setAttribute("aria-pressed", String(active));
+  });
+  $("selectionCount").textContent = `${String(keys.length).padStart(2, "0")} ACTIVE`;
   generate();
 }
 
+function toggleTheme(theme) {
+  if (selectedThemes.has(theme)) {
+    if (selectedThemes.size === 1) return;
+    selectedThemes.delete(theme);
+  } else {
+    selectedThemes.add(theme);
+  }
+  refreshThemes();
+}
+
 const themesEl = $("themes");
-for (const [key, t] of Object.entries(THEMES)) {
+for (const [index, key] of Object.keys(THEMES).entries()) {
   const b = document.createElement("button");
+  b.type = "button";
   b.className = "theme-btn";
   b.dataset.theme = key;
-  b.textContent = t.label;
-  b.onclick = () => setTheme(key);
+  b.dataset.index = String(index + 1).padStart(2, "0");
+  b.textContent = key === "black" ? "Black metal" : key;
+  b.onclick = () => toggleTheme(key);
   themesEl.appendChild(b);
 }
 
-const lengthEl = $("length"), lengthOut = $("lengthOut");
-lengthEl.addEventListener("input", () => lengthOut.textContent = lengthEl.value);
+const nameCountEl = $("nameCount"), nameCountOut = $("nameCountOut");
+nameCountEl.addEventListener("input", () => {
+  nameCountOut.textContent = nameCountEl.value;
+  generate();
+});
 
 function render(names) {
   const box = $("names");
   box.innerHTML = "";
-  for (const n of names) {
-    const div = document.createElement("div");
-    div.className = "name";
-    div.textContent = n;
-    div.title = "tap to copy";
-    div.onclick = () => {
+  $("resultCount").textContent = `${String(names.length).padStart(2, "0")} IMPRESSIONS`;
+  for (const [index, n] of names.entries()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "name";
+    button.dataset.index = String(index + 1).padStart(2, "0");
+    button.textContent = n;
+    button.title = `Copy ${n}`;
+    button.setAttribute("aria-label", `Copy ${n}`);
+    button.onclick = () => {
       navigator.clipboard.writeText(n).then(() => {
-        div.classList.add("copied");
-        setTimeout(() => div.classList.remove("copied"), 600);
+        button.classList.add("copied");
+        setTimeout(() => button.classList.remove("copied"), 600);
       });
     };
-    box.appendChild(div);
+    box.appendChild(button);
   }
 }
 
 function generate() {
-  const len = +lengthEl.value;
-  const count = Math.max(1, Math.min(50, +$("count").value || 1));
-  render(Array.from({length: count}, () => makeName(currentTheme, len)));
+  const count = Math.max(1, Math.min(4, +nameCountEl.value || 1));
+  render(Array.from({length: count}, () => makeName([...selectedThemes])));
 }
 
 $("gen").addEventListener("click", generate);
-document.addEventListener("keydown", e => {
-  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); generate(); }
-});
-setTheme("gore");
+refreshThemes();
 </script>
 </body>
 </html>
